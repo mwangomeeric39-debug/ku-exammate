@@ -40,7 +40,7 @@
                 <input type="text" id="unitCode" placeholder="e.g. CIT 201: Data Structures" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
             </div>
             
-            <!-- Restored File Upload Button -->
+            <!-- File Upload Button -->
             <div class="space-y-1">
                 <label class="block text-[10px] font-semibold text-slate-400">UPLOAD LECTURE NOTES (PDF, Excel, Photo, Docs)</label>
                 <input type="file" id="mediaFile" accept=".pdf,.xlsx,.xls,.csv,image/*" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer">
@@ -52,7 +52,7 @@
                 <textarea id="notesInput" rows="2" placeholder="Paste your lecturer's PDF notes or summary here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 resize-none"></textarea>
             </div>
 
-            <button onclick="initializeTutor()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md">
+            <button id="loadBtn" onclick="initializeTutor()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md">
                 Load Notes & Start Tutor 🚀
             </button>
         </div>
@@ -191,14 +191,15 @@
             currentUnit = document.getElementById('unitCode').value.trim();
             const fileInput = document.getElementById('mediaFile');
             const manualText = document.getElementById('notesInput').value.trim();
+            const loadBtn = document.getElementById('loadBtn');
 
             if (!currentUnit) {
                 alert("Weka unit code kwanza! (e.g. CIT 201)");
                 return;
             }
 
-            const button = event.target;
-            button.innerText = "Processing Notes... 🔄";
+            loadBtn.innerText = "Processing Notes... 🔄";
+            loadBtn.disabled = true;
 
             try {
                 if (fileInput.files.length > 0) {
@@ -209,7 +210,10 @@
                         const arrayBuffer = await file.arrayBuffer();
                         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                         let text = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
+                        // Read up to 25 pages max for lightning speed performance
+                        const maxPages = Math.min(pdf.numPages, 25);
+                        for (let i = 1; i <= maxPages; i++) {
+                            loadBtn.innerText = `Reading page ${i} of ${maxPages}... 📄`;
                             const page = await pdf.getPage(i);
                             const tContent = await page.getTextContent();
                             text += `\n--- Page ${i} ---\n` + tContent.items.map(item => item.str).join(" ");
@@ -241,7 +245,8 @@
                     contentType = "text/plain";
                 } else {
                     alert("Tafadhali upload faili au weka notes kwa text box! 😅");
-                    button.innerText = "Load Notes & Start Tutor 🚀";
+                    loadBtn.innerText = "Load Notes & Start Tutor 🚀";
+                    loadBtn.disabled = false;
                     return;
                 }
 
@@ -253,13 +258,16 @@
             } catch (err) {
                 console.error("Error:", err);
                 alert("Error processing file. Try again.");
-                button.innerText = "Load Notes & Start Tutor 🚀";
+                loadBtn.innerText = "Load Notes & Start Tutor 🚀";
+                loadBtn.disabled = false;
             }
         }
 
         function resetSetup() {
             document.getElementById('setupCard').classList.remove('hidden');
             document.getElementById('tutorInterface').classList.add('hidden');
+            document.getElementById('loadBtn').innerText = "Load Notes & Start Tutor 🚀";
+            document.getElementById('loadBtn').disabled = false;
         }
 
         function switchFeature(feature) {
@@ -295,8 +303,8 @@
         }
 
         async function generateSummary() {
-            document.getElementById('summaryContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Summarising notes... 🧠</div>`;
-            const reply = await askGrok("Summarise these study notes into simplified key points organised by topic for exam revision.", "summaryContent");
+            document.getElementById('summaryContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Summarising notes instantly... ⚡</div>`;
+            const reply = await askGrok("Give a fast, concise, bullet-point summary of these notes organized by core exam topics.", "summaryContent");
             document.getElementById('summaryContent').innerHTML = `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</div>`;
         }
 
