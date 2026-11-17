@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KU ExamMate - AI Study Coach</title>
+    <title>KU ExamMate - Ultimate AI Study Coach</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js for PDF reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- SheetJS for Excel/Spreadsheet reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
 
     <!-- Top Navigation Bar -->
-    <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+    <header class="bg-slate-900 border-b border-slate-800 p-3 sticky top-0 z-50">
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <span class="bg-amber-500 text-slate-950 font-black px-2 py-1 rounded text-xs tracking-wider">KU</span>
@@ -18,7 +22,7 @@
             </div>
             <div class="flex items-center space-x-2">
                 <span id="passBadge" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-full font-medium">Free Tier</span>
-                <button onclick="openPaywall()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition">Get Pass (KSh 99)</button>
+                <button onclick="openPaywall()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition">Pass (KSh 99)</button>
             </div>
         </div>
     </header>
@@ -26,61 +30,108 @@
     <!-- Main App Container -->
     <main class="max-w-md mx-auto p-4 flex-1 flex flex-col w-full space-y-4">
         
-        <!-- Step 1: Unit Setup Card -->
+        <!-- Step 1: Universal Unit Setup Card -->
         <div id="setupCard" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
             <div class="flex justify-between items-center">
-                <h2 class="font-bold text-sm text-slate-200">1. Select Your Course Unit</h2>
-                <span class="text-[10px] text-slate-400">Step 1 of 2</span>
+                <h2 class="font-bold text-sm text-slate-200">Setup Your Course Unit & Material</h2>
+                <span class="text-[10px] text-slate-400">Step 1</span>
             </div>
             <div>
                 <input type="text" id="unitCode" placeholder="e.g. CIT 201: Data Structures" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
             </div>
-            <div>
-                <textarea id="notesInput" rows="4" placeholder="Paste your lecturer's PDF notes or summary here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 resize-none"></textarea>
+            
+            <!-- Universal File Upload -->
+            <div class="space-y-1">
+                <label class="block text-[10px] font-semibold text-slate-400">UPLOAD MATERIAL (PDF, Excel, Photo, Notes)</label>
+                <input type="file" id="mediaFile" accept=".pdf,.xlsx,.xls,.csv,image/*" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer">
             </div>
+
+            <div class="text-center text-[10px] text-slate-500">- OR PASTE TEXT BELOW -</div>
+
+            <div>
+                <textarea id="notesInput" rows="2" placeholder="Paste notes summary here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 resize-none"></textarea>
+            </div>
+
             <button onclick="initializeTutor()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md shadow-amber-500/10">
-                Load Notes & Start Tutor 🚀
+                Launch ExamMate 🚀
             </button>
         </div>
 
-        <!-- Step 2: Active Tutor Interface (Hidden initially) -->
-        <div id="tutorInterface" class="hidden flex-1 flex flex-col space-y-4">
+        <!-- Step 2: 5-Feature Dashboard (Hidden initially) -->
+        <div id="tutorInterface" class="hidden flex-1 flex flex-col space-y-3">
             
-            <!-- Tab Switcher -->
-            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-                <button onclick="switchTab('chat')" id="tabChat" class="flex-1 py-2 text-xs font-bold rounded-lg bg-amber-500 text-slate-950 transition">Ask Tutor</button>
-                <button onclick="switchTab('cat')" id="tabCat" class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">Mock CAT 📝</button>
+            <div class="bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl flex justify-between items-center">
+                <span class="text-xs font-bold text-amber-400" id="activeUnitLabel">Unit</span>
+                <button onclick="resetSetup()" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700">Change Material 🔄</button>
             </div>
 
-            <!-- TAB 1: Chat Tutor View -->
-            <div id="viewChat" class="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 min-h-[350px]">
-                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
-                    <span class="text-xs font-bold text-amber-400" id="activeUnitLabel">Active Unit</span>
-                    <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Grok AI Ready 🧠</span>
+            <!-- 5-Feature Tab Bar -->
+            <div class="grid grid-cols-5 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[10px] text-center font-bold">
+                <button onclick="switchFeature('summary')" id="tabSummary" class="py-2 rounded-lg bg-amber-500 text-slate-950 transition">1. Summary</button>
+                <button onclick="switchFeature('cat')" id="tabCat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">2. CATs</button>
+                <button onclick="switchFeature('flashcards')" id="tabFlash" class="py-2 rounded-lg text-slate-400 hover:text-white transition">3. Cards</button>
+                <button onclick="switchFeature('chat')" id="tabChat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">4. Chat</button>
+                <button onclick="switchFeature('exam')" id="tabExam" class="py-2 rounded-lg text-slate-400 hover:text-white transition">5. Exam</button>
+            </div>
+
+            <!-- FEATURE 1: Summarise Notes -->
+            <div id="viewSummary" class="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-amber-400">Topic-by-Topic Revision Summary</span>
+                    <button onclick="generateSummary()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Generate ✨</button>
                 </div>
-                
-                <!-- Chat Message Box -->
-                <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 text-xs pr-1 max-h-[250px]">
+                <div id="summaryContent" class="flex-1 text-xs text-slate-300 space-y-2 overflow-y-auto max-h-[300px]">
+                    <p class="text-slate-400 text-center py-6">Click 'Generate' to simplify your uploaded notes into clear, topic-organized revision notes.</p>
+                </div>
+            </div>
+
+            <!-- FEATURE 2: Generate Practice CATs -->
+            <div id="viewCat" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-amber-400">Practice CAT Questions</span>
+                    <button onclick="generateCat()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Generate CAT 📝</button>
+                </div>
+                <div id="catContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
+                    <p class="text-slate-400 text-center py-6">Click 'Generate CAT' to build custom multi-choice & structured questions.</p>
+                </div>
+            </div>
+
+            <!-- FEATURE 3: Create Flashcards -->
+            <div id="viewFlash" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-amber-400">Interactive Flashcards</span>
+                    <button onclick="generateFlashcards()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Create Cards 📇</button>
+                </div>
+                <div id="flashContent" class="flex-1 flex flex-col justify-center items-center text-center p-4">
+                    <p class="text-slate-400 text-xs">Click 'Create Cards' to generate question/answer flashcards from your notes.</p>
+                </div>
+            </div>
+
+            <!-- FEATURE 4: Chat with Notes -->
+            <div id="viewChat" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
+                    <span class="text-xs font-bold text-amber-400">Chat with Notes (ELI10)</span>
+                    <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Grok AI Active</span>
+                </div>
+                <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 text-xs pr-1 max-h-[220px]">
                     <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300">
-                        👋 Habari comrade! I've read your notes for this unit. Ask me to explain a tough topic, or switch to the <strong>Mock CAT</strong> tab to test yourself!
+                        Habari comrade! Ask anything or say: <em>"Explain this topic like I'm 10 years old."</em>
                     </div>
                 </div>
-
-                <!-- Chat Input -->
                 <div class="flex space-x-2 pt-2">
-                    <input type="text" id="userQuery" placeholder="Ask a question about your notes..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" onkeypress="handleKey(event)">
+                    <input type="text" id="userQuery" placeholder="Ask question..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" onkeypress="handleKey(event)">
                     <button onclick="sendQuery()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">Ask</button>
                 </div>
             </div>
 
-            <!-- TAB 2: Mock CAT View -->
-            <div id="viewCat" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
-                    <span class="text-xs font-bold text-amber-400">Timed Mock CAT</span>
-                    <button onclick="generateCat()" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700">Generate New Questions ⚡</button>
+            <!-- FEATURE 5: Test Myself -->
+            <div id="viewExam" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-amber-400">Mock Exam & Grading</span>
+                    <button onclick="startExam()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Start Exam 🎓</button>
                 </div>
-                <div id="catContainer" class="space-y-3 text-xs">
-                    <p class="text-slate-400 text-center py-8">Click 'Generate New Questions' to create a custom CAT based strictly on your notes.</p>
+                <div id="examContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
+                    <p class="text-slate-400 text-center py-6">Take a practice exam and receive instant AI grading with explanations for mistakes.</p>
                 </div>
             </div>
 
@@ -100,13 +151,11 @@
                 <h3 class="font-bold text-sm text-amber-400">Unlock Exam Pass 🚀</h3>
                 <button onclick="closePaywall()" class="text-slate-400 hover:text-white text-sm">✕</button>
             </div>
-            <p class="text-xs text-slate-300">Get 7 days of unlimited AI revision support, document uploads, and custom mock CATs for just <strong>KSh 99</strong>.</p>
-            
+            <p class="text-xs text-slate-300">Get 7 days of unlimited AI study features for just <strong>KSh 99</strong>.</p>
             <div class="space-y-2">
                 <label class="block text-[10px] font-semibold text-slate-400">MPESA PHONE NUMBER</label>
                 <input type="text" id="mpesaPhone" placeholder="0712345678" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
             </div>
-
             <button onclick="triggerStkPush()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition text-xs shadow-lg shadow-emerald-600/20">
                 Pay KSh 99 via M-Pesa STK Push 📲
             </button>
@@ -116,68 +165,102 @@
     <!-- JavaScript Application Logic -->
     <script>
         let currentUnit = "";
-        let notesContent = "";
+        let processedContent = "";
+        let contentType = "text";
+        let flashcardList = [];
+        let currentCardIndex = 0;
 
-        function initializeTutor() {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        async function initializeTutor() {
             currentUnit = document.getElementById('unitCode').value.trim();
-            notesContent = document.getElementById('notesInput').value.trim();
+            const fileInput = document.getElementById('mediaFile');
+            const manualText = document.getElementById('notesInput').value.trim();
 
-            if (!currentUnit || !notesContent) {
-                alert("Tafadhali weka unit code na notes zako kwanza! 😅");
+            if (!currentUnit) {
+                alert("Weka unit code kwanza! (e.g. CIT 201)");
                 return;
             }
 
-            document.getElementById('setupCard').classList.add('hidden');
-            document.getElementById('tutorInterface').classList.remove('hidden');
-            document.getElementById('activeUnitLabel').innerText = currentUnit;
-        }
+            const button = event.target;
+            button.innerText = "Processing Notes... 🔄";
 
-        function switchTab(tab) {
-            const chatView = document.getElementById('viewChat');
-            const catView = document.getElementById('viewCat');
-            const tabChat = document.getElementById('tabChat');
-            const tabCat = document.getElementById('tabCat');
+            try {
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    contentType = file.type;
 
-            if (tab === 'chat') {
-                chatView.classList.remove('hidden');
-                catView.classList.add('hidden');
-                tabChat.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-amber-500 text-slate-950 transition";
-                tabCat.className = "flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
-            } else {
-                chatView.classList.add('hidden');
-                catView.classList.remove('hidden');
-                tabCat.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-amber-500 text-slate-950 transition";
-                tabChat.className = "flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+                    if (file.type === "application/pdf") {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        let text = "";
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const tContent = await page.getTextContent();
+                            text += `\n--- Page ${i} ---\n` + tContent.items.map(item => item.str).join(" ");
+                        }
+                        processedContent = text;
+                    } 
+                    else if (file.type.includes("sheet") || file.name.endsWith(".xlsx") || file.name.endsWith(".csv")) {
+                        const data = await file.arrayBuffer();
+                        const workbook = XLSX.read(data);
+                        let text = "";
+                        workbook.SheetNames.forEach(sheetName => {
+                            text += `\n--- Sheet: ${sheetName} ---\n` + XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]);
+                        });
+                        processedContent = text;
+                    } 
+                    else if (file.type.startsWith("image/")) {
+                        processedContent = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = error => reject(error);
+                            reader.readAsDataURL(file);
+                        });
+                    } 
+                    else {
+                        throw new Error("Unsupported file format.");
+                    }
+                } else if (manualText) {
+                    processedContent = manualText;
+                    contentType = "text/plain";
+                } else {
+                    alert("Tafadhali upload faili au weka notes kwa text box! 😅");
+                    button.innerText = "Launch ExamMate 🚀";
+                    return;
+                }
+
+                document.getElementById('setupCard').classList.add('hidden');
+                document.getElementById('tutorInterface').classList.remove('hidden');
+                document.getElementById('activeUnitLabel').innerText = currentUnit;
+                generateSummary(); // Auto-generate feature 1
+
+            } catch (err) {
+                console.error("Error:", err);
+                alert("Error processing file. Try again.");
+                button.innerText = "Launch ExamMate 🚀";
             }
         }
 
-        function handleKey(e) {
-            if (e.key === 'Enter') sendQuery();
+        function resetSetup() {
+            document.getElementById('setupCard').classList.remove('hidden');
+            document.getElementById('tutorInterface').classList.add('hidden');
         }
 
-        async function sendQuery() {
-            const input = document.getElementById('userQuery');
-            const query = input.value.trim();
-            if (!query) return;
+        function switchFeature(feature) {
+            const views = ['summary', 'cat', 'flash', 'chat', 'exam'];
+            views.forEach(v => {
+                document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('hidden');
+                document.getElementById('tab' + v.charAt(0).toUpperCase() + v.slice(1)).className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
+            });
 
-            const chatMessages = document.getElementById('chatMessages');
-            
-            // Append User Message
-            chatMessages.innerHTML += `
-                <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl text-slate-200 ml-4">
-                    <strong>You:</strong> ${query}
-                </div>
-            `;
-            input.value = "";
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            document.getElementById('view' + feature.charAt(0).toUpperCase() + feature.slice(1)).classList.remove('hidden');
+            document.getElementById('tab' + feature.charAt(0).toUpperCase() + feature.slice(1)).className = "py-2 rounded-lg bg-amber-500 text-slate-950 transition font-bold";
+        }
 
-            const loadingId = "loading_" + Date.now();
-            chatMessages.innerHTML += `
-                <div id="${loadingId}" class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-400 animate-pulse mr-4">
-                    <strong>ExamMate AI:</strong> Grok is reviewing your notes... 🧠
-                </div>
-            `;
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+        async function askGrok(promptText, outputContainerId) {
+            const container = document.getElementById(outputContainerId);
+            container.innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Grok AI is analyzing your notes... 🧠</div>`;
 
             try {
                 const response = await fetch('/api/ask', {
@@ -185,83 +268,130 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         unitCode: currentUnit,
-                        notes: notesContent,
-                        studentQuery: query
+                        content: processedContent,
+                        contentType: contentType,
+                        studentQuery: promptText
                     })
                 });
-
                 const data = await response.json();
-                document.getElementById(loadingId).remove();
-
-                chatMessages.innerHTML += `
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 mr-4">
-                        <strong>ExamMate AI:</strong> ${data.reply}
-                    </div>
-                `;
+                return data.reply;
             } catch (err) {
-                document.getElementById(loadingId).remove();
-                chatMessages.innerHTML += `
-                    <div class="bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-red-400 mr-4">
-                        ⚠️ Connection error. Please check your backend setup!
-                    </div>
-                `;
+                return "⚠️ Error connecting to Grok AI.";
             }
+        }
+
+        // FEATURE 1: Summarise Notes
+        async function generateSummary() {
+            const reply = await askGrok("Summarise these study notes into simplified key points organised by topic for exam revision.", "summaryContent");
+            document.getElementById('summaryContent').innerHTML = `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</div>`;
+        }
+
+        // FEATURE 2: Generate Practice CATs
+        async function generateCat() {
+            const reply = await askGrok("Generate 3 practice CAT questions (Multiple Choice and Structured) from these notes with answers at the end.", "catContent");
+            document.getElementById('catContent').innerHTML = `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</div>`;
+        }
+
+        // FEATURE 3: Flashcards
+        async function generateFlashcards() {
+            const reply = await askGrok("Create 4 flashcards from these notes. Format each strictly as Q: [question] | A: [answer]. Separate each card with '---'.", "flashContent");
+            
+            // Parse reply into cards
+            flashcardList = reply.split('---').map(card => {
+                const parts = card.trim().split('| A:');
+                return {
+                    q: parts[0] ? parts[0].replace('Q:', '').trim() : "Question",
+                    a: parts[1] ? parts[1].trim() : "Answer"
+                };
+            }).filter(c => c.q && c.a);
+
+            currentCardIndex = 0;
+            showCard();
+        }
+
+        function showCard() {
+            if (flashcardList.length === 0) {
+                document.getElementById('flashContent').innerHTML = `<p class="text-slate-400 text-xs">Could not generate cards. Try again.</p>`;
+                return;
+            }
+            const card = flashcardList[currentCardIndex];
+            document.getElementById('flashContent').innerHTML = `
+                <div onclick="flipCard(this)" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-center cursor-pointer min-h-[140px] flex flex-col justify-center items-center space-y-2 shadow-inner">
+                    <span class="text-[10px] text-amber-400">Card ${currentCardIndex + 1} of ${flashcardList.length} (Click to flip)</span>
+                    <p class="text-sm font-bold text-white card-text">${card.q}</p>
+                </div>
+                <div class="flex justify-between w-full pt-2">
+                    <button onclick="prevCard()" class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg text-xs">Previous</button>
+                    <button onclick="nextCard()" class="bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">Next Card ➡️</button>
+                </div>
+            `;
+        }
+
+        function flipCard(el) {
+            const card = flashcardList[currentCardIndex];
+            const textEl = el.querySelector('.card-text');
+            if (textEl.innerText === card.q) {
+                textEl.innerText = card.a;
+                el.style.borderColor = "#f59e0b";
+            } else {
+                textEl.innerText = card.q;
+                el.style.borderColor = "#1e293b";
+            }
+        }
+
+        function nextCard() {
+            currentCardIndex = (currentCardIndex + 1) % flashcardList.length;
+            showCard();
+        }
+
+        function prevCard() {
+            currentCardIndex = (currentCardIndex - 1 + flashcardList.length) % flashcardList.length;
+            showCard();
+        }
+
+        // FEATURE 4: Chat with Notes
+        function handleKey(e) { if (e.key === 'Enter') sendQuery(); }
+        async function sendQuery() {
+            const input = document.getElementById('userQuery');
+            const query = input.value.trim();
+            if (!query) return;
+
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML += `<div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl text-slate-200 ml-4"><strong>You:</strong> ${query}</div>`;
+            input.value = "";
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const reply = await askGrok(query, "chatMessages");
+            chatMessages.innerHTML += `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 mr-4"><strong>Grok AI:</strong> ${reply.replace(/\n/g, '<br>')}</div>`;
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        function generateCat() {
-            const catContainer = document.getElementById('catContainer');
-            catContainer.innerHTML = `
-                <div class="space-y-4">
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                        <p class="font-bold text-white">Q1: Based on your uploaded notes, explain the main principles of ${currentUnit} and give one practical example. (10 Marks)</p>
-                        <textarea id="ans1" placeholder="Type your answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
-                    </div>
-                    <button onclick="gradeCat()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs">
-                        Submit CAT for Instant AI Grading 🎯
-                    </button>
+        // FEATURE 5: Test Myself
+        async function startExam() {
+            const reply = await askGrok("Create a 3-question practice exam from these notes. List the questions clearly.", "examContent");
+            document.getElementById('examContent').innerHTML = `
+                <div class="space-y-3">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300">${reply.replace(/\n/g, '<br>')}</div>
+                    <textarea id="examAnswers" rows="3" placeholder="Type your answers for Q1, Q2, and Q3 here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
+                    <button onclick="submitExam()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs">Submit Exam for Grading 🎯</button>
                 </div>
             `;
         }
 
-        function gradeCat() {
-            const ans1 = document.getElementById('ans1').value.trim();
-            const catContainer = document.getElementById('catContainer');
+        async function submitExam() {
+            const ans = document.getElementById('examAnswers').value.trim();
+            if (!ans) { alert("Andika majibu yako kwanza!"); return; }
             
-            if (!ans1) {
-                alert("Andika jibu kwanza kabla ya kusubmit!");
-                return;
-            }
-
-            catContainer.innerHTML = `
-                <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-emerald-400">CAT Grade: 8.5/10 (A-)</span>
-                        <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded">Graded by Grok</span>
-                    </div>
-                    <p class="text-slate-300"><strong>Feedback:</strong> Solid grasp of the primary concepts from your notes. To get full marks next time, explicitly tie your practical example back to the definitions in your first lecture outline.</p>
-                    <button onclick="generateCat()" class="mt-2 w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-lg text-xs transition">
-                        Try Another Question 🔄
-                    </button>
-                </div>
-            `;
+            const reply = await askGrok(`Grade my answers for the practice exam: "${ans}". Provide my score, correct answers, and explanations for mistakes.`, "examContent");
+            document.getElementById('examContent').innerHTML = `<div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2"><span class="font-bold text-emerald-400">Exam Grading & Feedback</span><p class="text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</p><button onclick="startExam()" class="mt-2 w-full bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs">Retake Exam 🔄</button></div>`;
         }
 
-        function openPaywall() {
-            document.getElementById('paywallModal').classList.remove('hidden');
-        }
-
-        function closePaywall() {
-            document.getElementById('paywallModal').classList.add('hidden');
-        }
-
+        function openPaywall() { document.getElementById('paywallModal').classList.remove('hidden'); }
+        function closePaywall() { document.getElementById('paywallModal').classList.add('hidden'); }
         function triggerStkPush() {
             const phone = document.getElementById('mpesaPhone').value.trim();
-            if (!phone) {
-                alert("Weka namba ya M-Pesa tafadhali!");
-                return;
-            }
-            alert(`STK Push sent to ${phone}! Check your phone to enter your M-Pesa PIN for KSh 99.`);
+            if (!phone) { alert("Weka namba ya M-Pesa!"); return; }
+            alert(`STK Push sent to ${phone}! Enter PIN to complete KSh 99.`);
             closePaywall();
             document.getElementById('passBadge').className = "text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-medium";
             document.getElementById('passBadge').innerText = "Exam Pass Active 🚀";
