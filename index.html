@@ -1,479 +1,932 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KU ExamMate - Adaptive AI Study Coach</title>
-    <!-- Tailwind CSS CDN -->
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js for PDF reading -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- SheetJS for Excel/Spreadsheet reading -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
+
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-slate-900 border-b border-slate-800 p-3 sticky top-0 z-50">
-        <div class="max-w-md mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <span class="bg-amber-500 text-slate-950 font-black px-2 py-1 rounded text-xs tracking-wider">KU</span>
-                <h1 class="text-base font-bold tracking-tight">Exam<span class="text-amber-500">Mate</span></h1>
-            </div>
-            <div class="flex items-center space-x-2">
-                <span id="passBadge" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-full font-medium">Free Tier</span>
-                <button onclick="openPaywall()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition">Pass (KSh 99)</button>
-            </div>
+<header class="bg-slate-900 border-b border-slate-800 p-3 sticky top-0 z-50">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <span class="bg-amber-500 text-slate-950 font-black px-2 py-1 rounded text-xs">KU</span>
+            <h1 class="text-base font-bold">Exam<span class="text-amber-500">Mate</span></h1>
         </div>
-    </header>
-
-    <!-- Main App Container -->
-    <main class="max-w-md mx-auto p-4 flex-1 flex flex-col w-full space-y-4">
-        
-        <!-- Step 1: Unit Setup Card -->
-        <div id="setupCard" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
-            <div class="flex justify-between items-center">
-                <h2 class="font-bold text-sm text-slate-200">1. Select Your Course Unit</h2>
-                <span class="text-[10px] text-slate-400">Step 1 of 2</span>
-            </div>
-            <div>
-                <input type="text" id="unitCode" placeholder="e.g. CIT 201: Data Structures" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
-            </div>
-            
-            <!-- File Upload Button -->
-            <div class="space-y-1">
-                <label class="block text-[10px] font-semibold text-slate-400">UPLOAD LECTURE NOTES (PDF, Excel, Photo, Docs)</label>
-                <input type="file" id="mediaFile" accept=".pdf,.xlsx,.xls,.csv,image/*" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer">
-            </div>
-
-            <div class="text-center text-[10px] text-slate-500">- OR PASTE TEXT BELOW -</div>
-
-            <div>
-                <textarea id="notesInput" rows="2" placeholder="Paste your lecturer's PDF notes or summary here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 resize-none"></textarea>
-            </div>
-
-            <button id="loadBtn" onclick="initializeTutor()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md">
-                Load Notes & Start Tutor 🚀
-            </button>
-        </div>
-
-        <!-- Step 2: Full Dashboard including Adaptive Loop -->
-        <div id="tutorInterface" class="hidden flex-1 flex flex-col space-y-3">
-            
-            <div class="bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl flex justify-between items-center">
-                <span class="text-xs font-bold text-amber-400" id="activeUnitLabel">Unit</span>
-                <button onclick="resetSetup()" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700">Change Notes 🔄</button>
-            </div>
-
-            <!-- Tab Bar -->
-            <div class="grid grid-cols-6 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[10px] text-center font-bold">
-                <button onclick="switchFeature('summary')" id="tabSummary" class="py-2 rounded-lg bg-amber-500 text-slate-950 transition">Summary</button>
-                <button onclick="switchFeature('cat')" id="tabCat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">CATs</button>
-                <button onclick="switchFeature('flashcards')" id="tabFlash" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Cards</button>
-                <button onclick="switchFeature('chat')" id="tabChat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Chat</button>
-                <button onclick="switchFeature('exam')" id="tabExam" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Exam</button>
-                <button onclick="switchFeature('adaptive')" id="tabAdaptive" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Adaptive 🧬</button>
-            </div>
-
-            <!-- 1. Summary -->
-            <div id="viewSummary" class="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span class="text-xs font-bold text-amber-400">Topic Revision Summary</span>
-                    <button onclick="generateSummary()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Generate ✨</button>
-                </div>
-                <div id="summaryContent" class="flex-1 text-xs text-slate-300 space-y-2 overflow-y-auto max-h-[300px]">
-                    <p class="text-slate-400 text-center py-6">Click 'Generate' to simplify your notes.</p>
-                </div>
-            </div>
-
-            <!-- 2. CATs -->
-            <div id="viewCat" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span class="text-xs font-bold text-amber-400">Practice CAT Questions</span>
-                    <button onclick="generateCat()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Generate CAT 📝</button>
-                </div>
-                <div id="catContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
-                    <p class="text-slate-400 text-center py-6">Click 'Generate CAT' to build custom practice questions.</p>
-                </div>
-            </div>
-
-            <!-- 3. Flashcards -->
-            <div id="viewFlash" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span class="text-xs font-bold text-amber-400">Interactive Flashcards</span>
-                    <button onclick="generateFlashcards()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Create Cards 📇</button>
-                </div>
-                <div id="flashContent" class="flex-1 flex flex-col justify-center items-center text-center p-4">
-                    <p class="text-slate-400 text-xs">Click 'Create Cards' to generate active recall flashcards.</p>
-                </div>
-            </div>
-
-            <!-- 4. Chat -->
-            <div id="viewChat" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
-                    <span class="text-xs font-bold text-amber-400">Chat with Notes (ELI10)</span>
-                    <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Grok AI Active</span>
-                </div>
-                <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 text-xs pr-1 max-h-[220px]">
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300">
-                        Habari comrade! Ask anything or say: <em>"Explain this topic like I'm 10 years old."</em>
-                    </div>
-                </div>
-                <div class="flex space-x-2 pt-2">
-                    <input type="text" id="userQuery" placeholder="Ask question..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" onkeypress="handleKey(event)">
-                    <button onclick="sendQuery()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs">Ask</button>
-                </div>
-            </div>
-
-            <!-- 5. Exam -->
-            <div id="viewExam" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span class="text-xs font-bold text-amber-400">Mock Exam & Grading</span>
-                    <button onclick="startExam()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Start Exam 🎓</button>
-                </div>
-                <div id="examContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
-                    <p class="text-slate-400 text-center py-6">Take a practice exam and receive instant AI feedback.</p>
-                </div>
-            </div>
-
-            <!-- 6. ADAPTIVE DIAGNOSTIC LOOP -->
-            <div id="viewAdaptive" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
-                    <span class="text-xs font-bold text-amber-400">Adaptive Diagnostic Coach 🧬</span>
-                    <button onclick="startAdaptiveDiagnostic()" class="text-[10px] bg-amber-500 text-slate-950 font-bold px-2 py-1 rounded">Run Diagnostic 🔍</button>
-                </div>
-                <div id="adaptiveContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                        <p class="font-bold text-white">How the Adaptive Loop Works:</p>
-                        <p class="text-slate-400 text-[11px]">1. ExamMate analyzes your notes to identify core topics.<br>2. You take a diagnostic test.<br>3. ExamMate diagnoses your weak topic, simplifies it, gives you targeted practice questions, re-tests you, and measures your improvement!</p>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="border-t border-slate-900 py-3 text-center text-slate-600 text-[10px]">
-        Built for KU Comrades 🦅 | Powered by Grok AI
-    </footer>
-
-    <!-- Paywall Modal -->
-    <div id="paywallModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-amber-400">Unlock Exam Pass 🚀</h3>
-                <button onclick="closePaywall()" class="text-slate-400 hover:text-white text-sm">✕</button>
-            </div>
-            <p class="text-xs text-slate-300">Get unlimited adaptive AI study features for just <strong>KSh 99</strong>.</p>
-            <div class="space-y-2">
-                <label class="block text-[10px] font-semibold text-slate-400">MPESA PHONE NUMBER</label>
-                <input type="text" id="mpesaPhone" placeholder="0712345678" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
-            </div>
-            <button onclick="triggerStkPush()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition text-xs shadow-lg">
-                Pay KSh 99 via M-Pesa STK Push 📲
+        <div class="flex items-center space-x-2">
+            <span id="passBadge" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-full">Free Tier</span>
+            <button onclick="openPaywall()" class="bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg">
+                Pass (KSh 99)
             </button>
         </div>
     </div>
+</header>
 
-    <!-- JavaScript Application Logic -->
-    <script>
-        let currentUnit = "";
-        let processedContent = "";
-        let contentType = "text";
-        let flashcardList = [];
-        let currentCardIndex = 0;
+<main class="max-w-md mx-auto p-4 flex-1 flex flex-col w-full space-y-4">
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    <div id="setupCard" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+        <div class="flex justify-between items-center">
+            <h2 class="font-bold text-sm">1. Select Your Course Unit</h2>
+            <span class="text-[10px] text-slate-400">Step 1 of 2</span>
+        </div>
 
-        async function initializeTutor() {
-            currentUnit = document.getElementById('unitCode').value.trim();
-            const fileInput = document.getElementById('mediaFile');
-            const manualText = document.getElementById('notesInput').value.trim();
-            const loadBtn = document.getElementById('loadBtn');
+        <input type="text" id="unitCode" placeholder="e.g. CIT 201: Data Structures"
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm">
 
-            if (!currentUnit) {
-                alert("Weka unit code kwanza! (e.g. CIT 201)");
-                return;
-            }
+        <div class="space-y-1">
+            <label class="block text-[10px] font-semibold text-slate-400">
+                UPLOAD LECTURE NOTES (PDF, EXCEL, CSV OR PHOTO)
+            </label>
+            <input type="file" id="mediaFile" accept=".pdf,.xlsx,.xls,.csv,image/*"
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-400">
+        </div>
 
-            loadBtn.innerText = "Processing Notes... 🔄";
-            loadBtn.disabled = true;
+        <div class="text-center text-[10px] text-slate-500">OR PASTE TEXT BELOW</div>
 
-            try {
-                if (fileInput.files.length > 0) {
-                    const file = fileInput.files[0];
-                    contentType = file.type;
+        <textarea id="notesInput" rows="3" placeholder="Paste your lecture notes here..."
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs resize-none"></textarea>
 
-                    if (file.type === "application/pdf") {
-                        const arrayBuffer = await file.arrayBuffer();
-                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                        let text = "";
-                        // Read up to 25 pages max for lightning speed performance
-                        const maxPages = Math.min(pdf.numPages, 25);
-                        for (let i = 1; i <= maxPages; i++) {
-                            loadBtn.innerText = `Reading page ${i} of ${maxPages}... 📄`;
-                            const page = await pdf.getPage(i);
-                            const tContent = await page.getTextContent();
-                            text += `\n--- Page ${i} ---\n` + tContent.items.map(item => item.str).join(" ");
-                        }
-                        processedContent = text;
-                    } 
-                    else if (file.type.includes("sheet") || file.name.endsWith(".xlsx") || file.name.endsWith(".csv")) {
-                        const data = await file.arrayBuffer();
-                        const workbook = XLSX.read(data);
-                        let text = "";
-                        workbook.SheetNames.forEach(sheetName => {
-                            text += `\n--- Sheet: ${sheetName} ---\n` + XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]);
-                        });
-                        processedContent = text;
-                    } 
-                    else if (file.type.startsWith("image/")) {
-                        processedContent = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result);
-                            reader.onerror = error => reject(error);
-                            reader.readAsDataURL(file);
-                        });
-                    } 
-                    else {
-                        throw new Error("Unsupported file format.");
-                    }
-                } else if (manualText) {
-                    processedContent = manualText;
-                    contentType = "text/plain";
-                } else {
-                    alert("Tafadhali upload faili au weka notes kwa text box! 😅");
-                    loadBtn.innerText = "Load Notes & Start Tutor 🚀";
-                    loadBtn.disabled = false;
-                    return;
+        <div id="loadProgress" class="hidden text-xs text-amber-400"></div>
+
+        <button id="loadBtn" onclick="initializeTutor()"
+            class="w-full bg-amber-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs">
+            Load Notes & Start Tutor 🚀
+        </button>
+    </div>
+
+    <div id="tutorInterface" class="hidden flex-1 flex flex-col space-y-3">
+
+        <div class="bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl flex justify-between items-center">
+            <span class="text-xs font-bold text-amber-400" id="activeUnitLabel">Unit</span>
+            <button onclick="resetSetup()" class="text-[10px] bg-slate-800 px-2 py-1 rounded">
+                Change Notes 🔄
+            </button>
+        </div>
+
+        <div class="grid grid-cols-6 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[10px] text-center font-bold">
+            <button onclick="switchFeature('summary')" id="tabSummary" class="py-2 rounded-lg bg-amber-500 text-slate-950">Summary</button>
+            <button onclick="switchFeature('cat')" id="tabCat" class="py-2 rounded-lg text-slate-400">CATs</button>
+            <button onclick="switchFeature('flashcards')" id="tabFlashcards" class="py-2 rounded-lg text-slate-400">Cards</button>
+            <button onclick="switchFeature('chat')" id="tabChat" class="py-2 rounded-lg text-slate-400">Chat</button>
+            <button onclick="switchFeature('exam')" id="tabExam" class="py-2 rounded-lg text-slate-400">Exam</button>
+            <button onclick="switchFeature('adaptive')" id="tabAdaptive" class="py-2 rounded-lg text-slate-400">Adaptive</button>
+        </div>
+
+        <section id="viewSummary" class="flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-xs font-bold text-amber-400">Topic Revision Summary</span>
+                <button onclick="generateSummary()" class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded">
+                    Generate ✨
+                </button>
+            </div>
+            <div id="summaryContent" class="text-xs text-slate-300 whitespace-pre-wrap overflow-y-auto max-h-[400px]">
+                Your notes are ready.
+            </div>
+        </section>
+
+        <section id="viewCat" class="hidden flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-xs font-bold text-amber-400">Practice CAT Questions</span>
+                <button onclick="generateCat()" class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded">
+                    Generate CAT 📝
+                </button>
+            </div>
+            <div id="catContent" class="text-xs text-slate-300 whitespace-pre-wrap"></div>
+        </section>
+
+        <section id="viewFlashcards" class="hidden flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-xs font-bold text-amber-400">Interactive Flashcards</span>
+                <button onclick="generateFlashcards()" class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded">
+                    Create Cards 📇
+                </button>
+            </div>
+            <div id="flashContent" class="flex flex-col justify-center items-center text-center p-4">
+                <p class="text-slate-400 text-xs">Create active recall flashcards.</p>
+            </div>
+        </section>
+
+        <section id="viewChat" class="hidden flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
+                <span class="text-xs font-bold text-amber-400">Chat with Notes (ELI10)</span>
+                <span class="text-[10px] text-emerald-400">Grok AI</span>
+            </div>
+            <div id="chatMessages" class="flex-1 overflow-y-auto space-y-3 text-xs pr-1 max-h-[350px]">
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    Habari comrade! Ask anything about your notes.
+                </div>
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <input type="text" id="userQuery" placeholder="Ask a question..."
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs"
+                    onkeypress="handleKey(event)">
+                <button onclick="sendQuery()" class="bg-amber-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs">
+                    Ask
+                </button>
+            </div>
+        </section>
+
+        <section id="viewExam" class="hidden flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-xs font-bold text-amber-400">Mock Exam & Grading</span>
+                <button onclick="startExam()" class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-1 rounded">
+                    Start Exam 🎓
+                </button>
+            </div>
+            <div id="examContent" class="text-xs text-slate-300 whitespace-pre-wrap"></div>
+        </section>
+
+        <section id="viewAdaptive" class="hidden flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
+                <span class="text-xs font-bold text-amber-400">Adaptive Diagnostic Coach 🧬</span>
+                <button onclick="startAdaptiveDiagnostic()" class="text-[10px] bg-amber-500 text-slate-950 font-bold px-2 py-1 rounded">
+                    Run Diagnostic
+                </button>
+            </div>
+            <div id="adaptiveContent" class="text-xs text-slate-300 whitespace-pre-wrap">
+                <p class="text-slate-400">Take a diagnostic test to discover topics that need more revision.</p>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<footer class="border-t border-slate-900 py-3 text-center text-slate-600 text-[10px]">
+    Built for KU Comrades 🦅 | Powered by Grok AI
+</footer>
+
+<div id="paywallModal" class="hidden fixed inset-0 bg-slate-950/85 z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 space-y-4">
+        <div class="flex justify-between items-center">
+            <h3 class="font-bold text-sm text-amber-400">Unlock Exam Pass 🚀</h3>
+            <button onclick="closePaywall()" class="text-slate-400">✕</button>
+        </div>
+        <p class="text-xs text-slate-300">Exam Pass: KSh 99.</p>
+        <label class="block text-[10px] font-semibold text-slate-400">M-PESA PHONE NUMBER</label>
+        <input type="text" id="mpesaPhone" placeholder="0712345678"
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs">
+        <button onclick="triggerStkPush()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl text-xs">
+            Pay KSh 99 via M-Pesa
+        </button>
+        <p class="text-[10px] text-slate-500">Payment activation requires a connected payment backend.</p>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+let currentUnit = "";
+let processedContent = "";
+let contentType = "text/plain";
+let flashcardList = [];
+let currentCardIndex = 0;
+
+let cachedSummary = "";
+let cachedSummaryContent = "";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = (id) => document.getElementById(id);
+
+function setText(id, value) {
+    $(id).textContent = value;
+}
+
+function showLoading(id, message) {
+    const element = $(id);
+    element.textContent = message;
+    element.classList.add("text-amber-400");
+}
+
+function addMessage(container, text, className) {
+    const element = document.createElement("div");
+    element.className = className;
+    element.textContent = text;
+    container.appendChild(element);
+    container.scrollTop = container.scrollHeight;
+    return element;
+}
+
+/* ---------------- PDF EXTRACTION ---------------- */
+
+async function extractPdfText(pdf, loadBtn, maxPages = 25) {
+    const totalPages = Math.min(pdf.numPages, maxPages);
+    const pageTexts = new Array(totalPages);
+    let nextPage = 1;
+
+    async function worker() {
+        while (true) {
+            const pageNumber = nextPage++;
+            if (pageNumber > totalPages) return;
+
+            loadBtn.textContent =
+                `Reading page ${pageNumber} of ${totalPages}...`;
+
+            const page = await pdf.getPage(pageNumber);
+            const textContent = await page.getTextContent();
+
+            pageTexts[pageNumber - 1] =
+                `\n--- Page ${pageNumber} ---\n` +
+                textContent.items
+                    .filter(item => typeof item.str === "string")
+                    .map(item => item.str)
+                    .join(" ");
+        }
+    }
+
+    const workerCount = Math.min(4, totalPages);
+
+    await Promise.all(
+        Array.from({ length: workerCount }, () => worker())
+    );
+
+    return {
+        text: pageTexts.join("\n"),
+        pagesRead: totalPages,
+        totalPages: pdf.numPages
+    };
+}
+
+/* ---------------- FILE LOADING ---------------- */
+
+async function initializeTutor() {
+    currentUnit = $("unitCode").value.trim();
+
+    const file = $("mediaFile").files[0];
+    const manualText = $("notesInput").value.trim();
+    const loadBtn = $("loadBtn");
+    const progress = $("loadProgress");
+
+    if (!currentUnit) {
+        alert("Enter your course unit first.");
+        return;
+    }
+
+    if (!file && !manualText) {
+        alert("Please upload a file or paste your notes.");
+        return;
+    }
+
+    loadBtn.disabled = true;
+    progress.classList.remove("hidden");
+    processedContent = "";
+    cachedSummary = "";
+    cachedSummaryContent = "";
+
+    try {
+        if (file) {
+            contentType = file.type || "";
+
+            if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+                progress.textContent = "Opening PDF...";
+
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({
+                    data: arrayBuffer
+                }).promise;
+
+                const result = await extractPdfText(pdf, loadBtn, 25);
+                processedContent = result.text;
+                contentType = "text/plain";
+
+                if (result.totalPages > result.pagesRead) {
+                    progress.textContent =
+                        `Read ${result.pagesRead} of ${result.totalPages} pages.`;
                 }
 
-                document.getElementById('setupCard').classList.add('hidden');
-                document.getElementById('tutorInterface').classList.remove('hidden');
-                document.getElementById('activeUnitLabel').innerText = currentUnit;
-                generateSummary();
+                if (!processedContent.trim()) {
+                    throw new Error(
+                        "No selectable text found. This may be a scanned PDF. OCR is required."
+                    );
+                }
 
-            } catch (err) {
-                console.error("Error:", err);
-                alert("Error processing file. Try again.");
-                loadBtn.innerText = "Load Notes & Start Tutor 🚀";
-                loadBtn.disabled = false;
-            }
-        }
+            } else if (
+                file.name.toLowerCase().endsWith(".xlsx") ||
+                file.name.toLowerCase().endsWith(".xls") ||
+                file.name.toLowerCase().endsWith(".csv") ||
+                file.type.includes("sheet")
+            ) {
+                progress.textContent = "Reading spreadsheet...";
 
-        function resetSetup() {
-            document.getElementById('setupCard').classList.remove('hidden');
-            document.getElementById('tutorInterface').classList.add('hidden');
-            document.getElementById('loadBtn').innerText = "Load Notes & Start Tutor 🚀";
-            document.getElementById('loadBtn').disabled = false;
-        }
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data);
+                const sections = [];
 
-        function switchFeature(feature) {
-            const views = ['summary', 'cat', 'flash', 'chat', 'exam', 'adaptive'];
-            views.forEach(v => {
-                const el = document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1));
-                const tab = document.getElementById('tab' + v.charAt(0).toUpperCase() + v.slice(1));
-                if(el) el.classList.add('hidden');
-                if(tab) tab.className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
-            });
-
-            document.getElementById('view' + feature.charAt(0).toUpperCase() + feature.slice(1)).classList.remove('hidden');
-            document.getElementById('tab' + feature.charAt(0).toUpperCase() + feature.slice(1)).className = "py-2 rounded-lg bg-amber-500 text-slate-950 transition font-bold";
-        }
-
-        async function askGrok(promptText, outputContainerId) {
-            try {
-                const response = await fetch('/api/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        unitCode: currentUnit,
-                        content: processedContent,
-                        contentType: contentType,
-                        studentQuery: promptText
-                    })
+                workbook.SheetNames.forEach(sheetName => {
+                    sections.push(
+                        `--- Sheet: ${sheetName} ---\n` +
+                        XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName])
+                    );
                 });
-                const data = await response.json();
-                return data.reply;
-            } catch (err) {
-                return "⚠️ Error connecting to Grok AI.";
-            }
-        }
 
-        async function generateSummary() {
-            document.getElementById('summaryContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Summarising notes instantly... ⚡</div>`;
-            const reply = await askGrok("Give a fast, concise, bullet-point summary of these notes organized by core exam topics.", "summaryContent");
-            document.getElementById('summaryContent').innerHTML = `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</div>`;
-        }
+                processedContent = sections.join("\n\n");
+                contentType = "text/plain";
 
-        async function generateCat() {
-            document.getElementById('catContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Generating CAT... 📝</div>`;
-            const reply = await askGrok("Generate 3 practice CAT questions (Multiple Choice and Structured) from these notes with answers at the end.", "catContent");
-            document.getElementById('catContent').innerHTML = `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</div>`;
-        }
+            } else if (file.type.startsWith("image/")) {
+                progress.textContent = "Preparing image...";
 
-        async function generateFlashcards() {
-            document.getElementById('flashContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Creating flashcards... 📇</div>`;
-            const reply = await askGrok("Create 4 flashcards from these notes. Format each strictly as Q: [question] | A: [answer]. Separate each card with '---'.", "flashContent");
-            
-            flashcardList = reply.split('---').map(card => {
-                const parts = card.trim().split('| A:');
-                return {
-                    q: parts[0] ? parts[0].replace('Q:', '').trim() : "Question",
-                    a: parts[1] ? parts[1].trim() : "Answer"
-                };
-            }).filter(c => c.q && c.a);
+                if (file.size > 8 * 1024 * 1024) {
+                    throw new Error("Please use an image smaller than 8 MB.");
+                }
 
-            currentCardIndex = 0;
-            showCard();
-        }
+                processedContent = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error("Could not read image."));
+                    reader.readAsDataURL(file);
+                });
 
-        function showCard() {
-            if (flashcardList.length === 0) {
-                document.getElementById('flashContent').innerHTML = `<p class="text-slate-400 text-xs">Could not generate cards. Try again.</p>`;
-                return;
-            }
-            const card = flashcardList[currentCardIndex];
-            document.getElementById('flashContent').innerHTML = `
-                <div onclick="flipCard(this)" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-center cursor-pointer min-h-[140px] flex flex-col justify-center items-center space-y-2 shadow-inner">
-                    <span class="text-[10px] text-amber-400">Card ${currentCardIndex + 1} of ${flashcardList.length} (Click to flip)</span>
-                    <p class="text-sm font-bold text-white card-text">${card.q}</p>
-                </div>
-                <div class="flex justify-between w-full pt-2">
-                    <button onclick="prevCard()" class="bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg text-xs">Previous</button>
-                    <button onclick="nextCard()" class="bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">Next Card ➡️</button>
-                </div>
-            `;
-        }
+                contentType = file.type;
 
-        function flipCard(el) {
-            const card = flashcardList[currentCardIndex];
-            const textEl = el.querySelector('.card-text');
-            if (textEl.innerText === card.q) {
-                textEl.innerText = card.a;
-                el.style.borderColor = "#f59e0b";
             } else {
-                textEl.innerText = card.q;
-                el.style.borderColor = "#1e293b";
+                throw new Error("Unsupported file format.");
             }
+
+        } else {
+            processedContent = manualText;
+            contentType = "text/plain";
         }
 
-        function nextCard() {
-            currentCardIndex = (currentCardIndex + 1) % flashcardList.length;
-            showCard();
+        if (!processedContent || !processedContent.trim()) {
+            throw new Error("No readable content was found.");
         }
 
-        function prevCard() {
-            currentCardIndex = (currentCardIndex - 1 + flashcardList.length) % flashcardList.length;
-            showCard();
+        $("setupCard").classList.add("hidden");
+        $("tutorInterface").classList.remove("hidden");
+        setText("activeUnitLabel", currentUnit);
+
+        progress.textContent = "Notes loaded. Preparing your summary...";
+        generateSummary();
+
+    } catch (error) {
+        console.error("File processing error:", error);
+        alert(error.message || "Error processing your file.");
+    } finally {
+        loadBtn.disabled = false;
+        loadBtn.textContent = "Load Notes & Start Tutor 🚀";
+        progress.classList.add("hidden");
+    }
+}
+
+/* ---------------- RESET & NAVIGATION ---------------- */
+
+function resetSetup() {
+    $("setupCard").classList.remove("hidden");
+    $("tutorInterface").classList.add("hidden");
+
+    currentUnit = "";
+    processedContent = "";
+    cachedSummary = "";
+    cachedSummaryContent = "";
+
+    $("mediaFile").value = "";
+    $("notesInput").value = "";
+}
+
+function switchFeature(feature) {
+    const features = ["summary", "cat", "flashcards", "chat", "exam", "adaptive"];
+
+    features.forEach(name => {
+        const view = $("view" + name.charAt(0).toUpperCase() + name.slice(1));
+        const tab = $("tab" + name.charAt(0).toUpperCase() + name.slice(1));
+
+        if (view) {
+            view.classList.add("hidden");
+            view.classList.remove("flex");
         }
 
-        function handleKey(e) { if (e.key === 'Enter') sendQuery(); }
-        async function sendQuery() {
-            const input = document.getElementById('userQuery');
-            const query = input.value.trim();
-            if (!query) return;
-
-            const chatMessages = document.getElementById('chatMessages');
-            chatMessages.innerHTML += `<div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl text-slate-200 ml-4"><strong>You:</strong> ${query}</div>`;
-            input.value = "";
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            const reply = await askGrok(query, "chatMessages");
-            chatMessages.innerHTML += `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 mr-4"><strong>Grok AI:</strong> ${reply.replace(/\n/g, '<br>')}</div>`;
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (tab) {
+            tab.className = "py-2 rounded-lg text-slate-400";
         }
+    });
 
-        async function startExam() {
-            document.getElementById('examContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Preparing exam... 🎓</div>`;
-            const reply = await askGrok("Create a 3-question diagnostic practice exam from these notes. List the questions clearly.", "examContent");
-            document.getElementById('examContent').innerHTML = `
-                <div class="space-y-3">
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300">${reply.replace(/\n/g, '<br>')}</div>
-                    <textarea id="examAnswers" rows="3" placeholder="Type your answers for Q1, Q2, and Q3 here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
-                    <button onclick="submitExam()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs">Submit Exam for Grading 🎯</button>
-                </div>
-            `;
-        }
+    const selectedView =
+        $("view" + feature.charAt(0).toUpperCase() + feature.slice(1));
 
-        async function submitExam() {
-            const ans = document.getElementById('examAnswers').value.trim();
-            if (!ans) { alert("Andika majibu yako kwanza!"); return; }
-            document.getElementById('examContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Grading exam and analyzing weak points... 🔍</div>`;
-            
-            const reply = await askGrok(`Grade my answers for the practice exam: "${ans}". Provide my score, correct answers, and explanations for mistakes.`, "examContent");
-            document.getElementById('examContent').innerHTML = `<div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2"><span class="font-bold text-emerald-400">Exam Grading & Feedback</span><p class="text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</p><button onclick="startExam()" class="mt-2 w-full bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs">Retake Exam 🔄</button></div>`;
-        }
+    const selectedTab =
+        $("tab" + feature.charAt(0).toUpperCase() + feature.slice(1));
 
-        async function startAdaptiveDiagnostic() {
-            const container = document.getElementById('adaptiveContent');
-            container.innerHTML = `
-                <div class="space-y-3">
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 space-y-2">
-                        <p class="font-bold text-amber-400">Diagnostic Step 1: Take Diagnostic Test</p>
-                        <p class="text-xs text-slate-400">Answer this quick diagnostic test based on your notes:</p>
-                        <p class="text-white text-xs font-semibold">Q: Briefly explain database normalization and why 1NF, 2NF, and 3NF are used in relational databases.</p>
-                        <textarea id="diagAnswer" rows="3" placeholder="Type your answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
-                    </div>
-                    <button onclick="submitDiagnostic()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition">
-                        Run Adaptive Diagnostic Analysis 🧬
-                    </button>
-                </div>
-            `;
-        }
+    selectedView.classList.remove("hidden");
+    selectedView.classList.add("flex");
 
-        async function submitDiagnostic() {
-            const ans = document.getElementById('diagAnswer').value.trim();
-            if (!ans) { alert("Please type your answer!"); return; }
+    selectedTab.className =
+        "py-2 rounded-lg bg-amber-500 text-slate-950 font-bold";
+}
 
-            const container = document.getElementById('adaptiveContent');
-            container.innerHTML = `<div class="text-center py-10 text-amber-400 animate-pulse">Analyzing weak points, simplifying concepts, and preparing re-test... 🔄</div>`;
+/* ---------------- API REQUEST ---------------- */
 
-            try {
-                const response = await fetch('/api/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        unitCode: currentUnit,
-                        content: processedContent,
-                        contentType: contentType,
-                        actionType: "diagnose_exam",
-                        studentAnswers: ans
-                    })
-                });
-                const data = await response.json();
+async function askGrok(promptText, options = {}) {
+    const response = await fetch("/api/ask", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            unitCode: currentUnit,
+            content: options.content ?? processedContent,
+            contentType: options.contentType ?? contentType,
+            studentQuery: promptText,
+            actionType: options.actionType || "",
+            studentAnswers: options.studentAnswers || ""
+        })
+    });
 
-                container.innerHTML = `
-                    <div class="bg-slate-950 p-4 rounded-xl border border-amber-500/30 space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-amber-400">Adaptive Diagnostic Results 🧬</span>
-                            <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded">Weakness Identified</span>
-                        </div>
-                        <div class="text-slate-300 leading-relaxed text-xs space-y-2">
-                            ${data.reply.replace(/\n/g, '<br>')}
-                        </div>
-                        <button onclick="startAdaptiveDiagnostic()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-lg text-xs transition">
-                            Take Improvement Re-Test 🚀
-                        </button>
-                    </div>
-                `;
-            } catch (err) {
-                container.innerHTML = `<p class="text-red-400 text-center py-4">⚠️ Error running diagnostic analysis.</p>`;
+    let data;
+
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error("The server returned an invalid response.");
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || "AI request failed.");
+    }
+
+    if (!data.reply) {
+        throw new Error("The AI returned an empty response.");
+    }
+
+    return data.reply;
+}
+
+/* ---------------- SMART CHUNKING ---------------- */
+
+function splitIntoChunks(text, maxChars = 9000) {
+    const paragraphs = text
+        .split(/\n\s*\n/)
+        .map(p => p.trim())
+        .filter(Boolean);
+
+    const chunks = [];
+    let current = "";
+
+    for (const paragraph of paragraphs) {
+        if (paragraph.length > maxChars) {
+            if (current) {
+                chunks.push(current);
+                current = "";
             }
+
+            for (let i = 0; i < paragraph.length; i += maxChars) {
+                chunks.push(paragraph.slice(i, i + maxChars));
+            }
+            continue;
         }
 
-        function openPaywall() { document.getElementById('paywallModal').classList.remove('hidden'); }
-        function closePaywall() { document.getElementById('paywallModal').classList.add('hidden'); }
-        function triggerStkPush() {
-            const phone = document.getElementById('mpesaPhone').value.trim();
-            if (!phone) { alert("Weka namba ya M-Pesa!"); return; }
-            alert(`STK Push sent to ${phone}! Enter PIN to complete KSh 99.`);
-            closePaywall();
-            document.getElementById('passBadge').className = "text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-medium";
-            document.getElementById('passBadge').innerText = "Exam Pass Active 🚀";
+        if ((current.length + paragraph.length + 2) > maxChars) {
+            if (current) chunks.push(current);
+            current = paragraph;
+        } else {
+            current += (current ? "\n\n" : "") + paragraph;
         }
-    </script>
+    }
+
+    if (current) chunks.push(current);
+
+    return chunks;
+}
+
+async function mapWithConcurrency(items, limit, callback) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+
+    async function worker() {
+        while (true) {
+            const index = nextIndex++;
+            if (index >= items.length) return;
+
+            results[index] = await callback(items[index], index);
+        }
+    }
+
+    await Promise.all(
+        Array.from(
+            { length: Math.min(limit, items.length) },
+            () => worker()
+        )
+    );
+
+    return results;
+}
+
+/* ---------------- FAST SUMMARY GENERATION ---------------- */
+
+async function generateSummary() {
+    const container = $("summaryContent");
+
+    if (!processedContent) {
+        container.textContent = "Please load your notes first.";
+        return;
+    }
+
+    if (
+        cachedSummary &&
+        cachedSummaryContent === processedContent
+    ) {
+        container.textContent = cachedSummary;
+        return;
+    }
+
+    showLoading("summaryContent", "Preparing your study summary...");
+
+    try {
+        // Images are sent directly to the vision-capable model.
+        if (contentType.startsWith("image/")) {
+            const reply = await askGrok(
+                "Read this study image and create a clear, concise revision summary with headings, key definitions and important concepts."
+            );
+
+            cachedSummary = reply;
+            cachedSummaryContent = processedContent;
+            container.textContent = reply;
+            return;
+        }
+
+        const chunks = splitIntoChunks(processedContent, 9000);
+
+        if (chunks.length === 0) {
+            throw new Error("No readable text was found.");
+        }
+
+        const partialSummaries = await mapWithConcurrency(
+            chunks,
+            3,
+            async (chunk, index) => {
+                container.textContent =
+                    `Reading and summarising section ${index + 1} of ${chunks.length}...`;
+
+                return await askGrok(
+                    `Summarise this section of my ${currentUnit} lecture notes.
+                    Keep the important concepts, definitions, examples and formulas.
+                    Use short bullet points. Do not invent information.
+
+                    SECTION ${index + 1} OF ${chunks.length}`,
+                    {
+                        content: chunk,
+                        contentType: "text/plain",
+                        actionType: "summarize_chunk"
+                    }
+                );
+            }
+        );
+
+        container.textContent = "Combining section summaries...";
+
+        let finalSummary;
+
+        if (partialSummaries.length === 1) {
+            finalSummary = partialSummaries[0];
+        } else {
+            finalSummary = await askGrok(
+                "Combine these section summaries into one well-organised revision guide. Remove repetition, preserve important details, use clear topic headings, bullet points, definitions and examples. Do not add facts that are not in the supplied summaries.",
+                {
+                    content: partialSummaries.join("\n\n--- SECTION SUMMARY ---\n\n"),
+                    contentType: "text/plain",
+                    actionType: "combine_summary"
+                }
+            );
+        }
+
+        cachedSummary = finalSummary;
+        cachedSummaryContent = processedContent;
+        container.textContent = finalSummary;
+
+    } catch (error) {
+        console.error("Summary error:", error);
+        container.textContent =
+            "Could not generate the summary: " + error.message;
+    }
+}
+
+/* ---------------- CAT GENERATION ---------------- */
+
+async function generateCat() {
+    const container = $("catContent");
+    showLoading("catContent", "Generating practice questions...");
+
+    try {
+        const source = cachedSummary || processedContent;
+
+        const reply = await askGrok(
+            "Generate 5 university-level practice CAT questions from these study materials. Include a mix of multiple-choice and structured questions. Put the answers and explanations in a separate answer section at the end.",
+            {
+                content: source,
+                contentType: "text/plain"
+            }
+        );
+
+        container.textContent = reply;
+
+    } catch (error) {
+        container.textContent = "Error: " + error.message;
+    }
+}
+
+/* ---------------- FLASHCARDS ---------------- */
+
+async function generateFlashcards() {
+    const container = $("flashContent");
+    container.textContent = "Creating flashcards...";
+
+    try {
+        const source = cachedSummary || processedContent;
+
+        const reply = await askGrok(
+            "Create 8 useful active-recall flashcards from these notes. Format exactly as Q: question | A: answer. Separate cards with a line containing ---.",
+            {
+                content: source,
+                contentType: "text/plain"
+            }
+        );
+
+        flashcardList = reply.split("---").map(card => {
+            const parts = card.trim().split("| A:");
+
+            return {
+                q: parts[0] ? parts[0].replace(/^Q:/, "").trim() : "",
+                a: parts[1] ? parts[1].trim() : ""
+            };
+        }).filter(card => card.q && card.a);
+
+        currentCardIndex = 0;
+        showCard();
+
+    } catch (error) {
+        container.textContent = "Could not create flashcards: " + error.message;
+    }
+}
+
+function showCard() {
+    const container = $("flashContent");
+
+    if (!flashcardList.length) {
+        container.textContent = "No flashcards were generated. Try again.";
+        return;
+    }
+
+    const card = flashcardList[currentCardIndex];
+    container.replaceChildren();
+
+    const cardBox = document.createElement("div");
+    cardBox.className =
+        "w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-center cursor-pointer min-h-[140px] flex flex-col justify-center items-center space-y-3";
+
+    const label = document.createElement("span");
+    label.className = "text-[10px] text-amber-400";
+    label.textContent =
+        `Card ${currentCardIndex + 1} of ${flashcardList.length} — Click to flip`;
+
+    const question = document.createElement("p");
+    question.className = "text-sm font-bold text-white";
+    question.textContent = card.q;
+
+    cardBox.append(label, question);
+
+    let showingAnswer = false;
+
+    cardBox.onclick = () => {
+        showingAnswer = !showingAnswer;
+        question.textContent = showingAnswer ? card.a : card.q;
+        cardBox.style.borderColor = showingAnswer ? "#f59e0b" : "#1e293b";
+    };
+
+    const controls = document.createElement("div");
+    controls.className = "flex justify-between w-full pt-3";
+
+    const previous = document.createElement("button");
+    previous.className = "bg-slate-800 px-3 py-2 rounded-lg text-xs";
+    previous.textContent = "Previous";
+    previous.onclick = prevCard;
+
+    const next = document.createElement("button");
+    next.className = "bg-amber-500 text-slate-950 px-3 py-2 rounded-lg text-xs font-bold";
+    next.textContent = "Next Card";
+    next.onclick = nextCard;
+
+    controls.append(previous, next);
+    container.append(cardBox, controls);
+}
+
+function nextCard() {
+    currentCardIndex = (currentCardIndex + 1) % flashcardList.length;
+    showCard();
+}
+
+function prevCard() {
+    currentCardIndex =
+        (currentCardIndex - 1 + flashcardList.length) % flashcardList.length;
+    showCard();
+}
+
+/* ---------------- CHAT ---------------- */
+
+function handleKey(event) {
+    if (event.key === "Enter") sendQuery();
+}
+
+async function sendQuery() {
+    const input = $("userQuery");
+    const query = input.value.trim();
+
+    if (!query) return;
+
+    input.value = "";
+
+    const messages = $("chatMessages");
+
+    addMessage(
+        messages,
+        "You: " + query,
+        "bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl text-slate-200 ml-4"
+    );
+
+    const loading = addMessage(
+        messages,
+        "ExamMate is thinking...",
+        "bg-slate-950 p-3 rounded-xl border border-slate-800 text-amber-400 mr-4"
+    );
+
+    try {
+        const source = cachedSummary || processedContent;
+
+        const reply = await askGrok(
+            `${query}
+
+Use the supplied study material as your primary source. Explain difficult ideas simply, as if teaching a beginner. If the answer is not in the supplied material, say so.`,
+            {
+                content: source,
+                contentType: "text/plain"
+            }
+        );
+
+        loading.textContent = "ExamMate: " + reply;
+        loading.className =
+            "bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 mr-4 whitespace-pre-wrap";
+
+    } catch (error) {
+        loading.textContent = "Error: " + error.message;
+    }
+
+    messages.scrollTop = messages.scrollHeight;
+}
+
+/* ---------------- MOCK EXAM ---------------- */
+
+async function startExam() {
+    const container = $("examContent");
+    container.textContent = "Preparing your practice exam...";
+
+    try {
+        const source = cachedSummary || processedContent;
+
+        const reply = await askGrok(
+            "Create a 5-question university-level practice exam based on these notes. Include different question types. Do not provide the answers yet.",
+            {
+                content: source,
+                contentType: "text/plain"
+            }
+        );
+
+        container.replaceChildren();
+
+        const questions = document.createElement("div");
+        questions.className = "whitespace-pre-wrap mb-3";
+        questions.textContent = reply;
+
+        const answers = document.createElement("textarea");
+        answers.id = "examAnswers";
+        answers.rows = 5;
+        answers.placeholder = "Type your answers here...";
+        answers.className =
+            "w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200";
+
+        const submit = document.createElement("button");
+        submit.className =
+            "w-full bg-amber-500 text-slate-950 font-bold py-2 rounded-xl text-xs mt-3";
+        submit.textContent = "Submit Exam for Grading";
+        submit.onclick = submitExam;
+
+        container.append(questions, answers, submit);
+
+    } catch (error) {
+        container.textContent = "Could not prepare exam: " + error.message;
+    }
+}
+
+async function submitExam() {
+    const answers = $("examAnswers").value.trim();
+
+    if (!answers) {
+        alert("Please enter your answers first.");
+        return;
+    }
+
+    const container = $("examContent");
+    container.textContent = "Grading your answers...";
+
+    try {
+        const reply = await askGrok(
+            `Grade these student answers against the supplied study materials and questions. Give a score, explain mistakes, provide correct answers and recommend topics to revise.
+
+STUDENT ANSWERS:
+${answers}`,
+            {
+                content: cachedSummary || processedContent,
+                contentType: "text/plain"
+            }
+        );
+
+        container.textContent = reply;
+
+    } catch (error) {
+        container.textContent = "Grading failed: " + error.message;
+    }
+}
+
+/* ---------------- ADAPTIVE DIAGNOSTIC ---------------- */
+
+async function startAdaptiveDiagnostic() {
+    const container = $("adaptiveContent");
+    container.replaceChildren();
+
+    const intro = document.createElement("p");
+    intro.className = "text-slate-400 mb-3";
+    intro.textContent =
+        "Answer this question using what you have learned from your notes.";
+
+    const answer = document.createElement("textarea");
+    answer.id = "diagAnswer";
+    answer.rows = 5;
+    answer.placeholder = "Write your answer here...";
+    answer.className =
+        "w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs";
+
+    const submit = document.createElement("button");
+    submit.className =
+        "w-full bg-amber-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs mt-3";
+    submit.textContent = "Analyse My Answer";
+    submit.onclick = submitDiagnostic;
+
+    container.append(intro, answer, submit);
+}
+
+async function submitDiagnostic() {
+    const answer = $("diagAnswer").value.trim();
+
+    if (!answer) {
+        alert("Please type your answer first.");
+        return;
+    }
+
+    const container = $("adaptiveContent");
+    container.textContent = "Analysing your answer and identifying weak topics...";
+
+    try {
+        const reply = await askGrok(
+            "Analyse the student's answer against the supplied study materials. Identify the concepts they understand and misunderstand. Explain the weakest topic simply. Give two targeted practice questions and explain how improvement can be measured.",
+            {
+                content: cachedSummary || processedContent,
+                contentType: "text/plain",
+                actionType: "diagnose_exam",
+                studentAnswers: answer
+            }
+        );
+
+        container.textContent = reply;
+
+    } catch (error) {
+        container.textContent = "Diagnostic failed: " + error.message;
+    }
+}
+
+/* ---------------- PAYMENT PLACEHOLDER ---------------- */
+
+function openPaywall() {
+    $("paywallModal").classList.remove("hidden");
+}
+
+function closePaywall() {
+    $("paywallModal").classList.add("hidden");
+}
+
+function triggerStkPush() {
+    alert(
+        "M-Pesa payment is not connected yet. This button cannot activate a paid pass until a real payment backend is integrated."
+    );
+}
+
+/* ---------------- INITIAL STATE ---------------- */
+
+switchFeature("summary");
+</script>
+
 </body>
 </html>
