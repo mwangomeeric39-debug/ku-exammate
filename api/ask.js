@@ -1,12 +1,16 @@
 
 export default async function handler(req, res) {
+    // 1. Allow POST requests only
     if (req.method !== "POST") {
         return res.status(405).json({
             error: "Method not allowed"
         });
     }
 
-    if (!process.env.XAI_API_KEY) {
+    // 2. Check API key
+    const apiKey = process.env.XAI_API_KEY;
+
+    if (!apiKey) {
         console.error("XAI_API_KEY is missing.");
 
         return res.status(500).json({
@@ -14,6 +18,7 @@ export default async function handler(req, res) {
         });
     }
 
+    // 3. Read request data
     const {
         unitCode,
         content,
@@ -23,6 +28,7 @@ export default async function handler(req, res) {
         studentAnswers = ""
     } = req.body || {};
 
+    // 4. Validate required fields
     if (
         typeof unitCode !== "string" ||
         !unitCode.trim() ||
@@ -34,22 +40,33 @@ export default async function handler(req, res) {
         });
     }
 
+    if (
+        typeof contentType !== "string" ||
+        typeof studentQuery !== "string" ||
+        typeof actionType !== "string" ||
+        typeof studentAnswers !== "string"
+    ) {
+        return res.status(400).json({
+            error: "Invalid request format."
+        });
+    }
+
     const isImage = contentType.startsWith("image/");
 
-    // Keep normal text requests within a reasonable size.
-    // Images have a separate limit because they are sent as data URLs.
+    // 5. Validate content size
     if (!isImage && content.length > 120000) {
         return res.status(413).json({
-            error: "This text is too large. Please upload fewer pages or use the summary feature."
+            error: "Study text is too large. Please upload fewer pages."
         });
     }
 
     if (isImage && content.length > 12 * 1024 * 1024) {
         return res.status(413).json({
-            error: "This image is too large. Please upload a smaller image."
+            error: "Image is too large. Please upload a smaller image."
         });
     }
 
+    // 6. System instructions
     const systemPrompt = `
 You are ExamMate, an expert AI study coach.
 
@@ -59,7 +76,7 @@ Course unit: ${unitCode}
 
 Your responsibilities:
 - Explain difficult ideas in simple language.
-- Use the supplied study material as your primary source.
+- Use supplied study material as your primary source.
 - Organise answers using headings and bullet points.
 - Preserve important definitions, formulas and examples.
 - Never invent information and present it as if it came from the notes.
@@ -67,9 +84,11 @@ Your responsibilities:
 - Help students understand concepts rather than simply memorising answers.
 `;
 
+    // 7. Prepare the user message
     let userMessage = "";
 
     if (actionType === "summarize_chunk") {
+
         userMessage = `
 Summarise this section of lecture notes for ${unitCode}.
 
@@ -88,14 +107,14 @@ ${content}
 
 ${studentQuery}
 `;
-    }
 
-    else if (actionType === "combine_summary") {
+    } else if (actionType === "combine_summary") {
+
         userMessage = `
 Combine the following section summaries into one complete revision guide for ${unitCode}.
 
 Instructions:
-1. Organise the material under clear topic headings.
+1. Organise material under clear topic headings.
 2. Remove repeated information.
 3. Preserve important definitions and explanations.
 4. Include formulas and examples where supplied.
@@ -107,33 +126,33 @@ SECTION SUMMARIES:
 
 ${content}
 `;
-    }
 
-    else if (actionType === "diagnose_exam") {
+    } else if (actionType === "diagnose_exam") {
+
         userMessage = `
-You are analysing a student's diagnostic answer for ${unitCode}.
+Analyse this student's diagnostic answers for ${unitCode}.
 
 STUDY MATERIALS:
 ${content}
 
-STUDENT ANSWER:
+STUDENT ANSWERS:
 ${studentAnswers}
 
-Analyse the answer and provide:
+Provide:
 
 1. What the student understood correctly.
 2. What the student misunderstood or missed.
-3. The weakest topic or concept.
+3. The weakest topic or concept, if supported by the answers.
 4. A simple explanation of that weak topic.
 5. Two targeted practice questions.
-6. How the student can measure improvement in a retest.
+6. How improvement can be measured in a retest.
 
-Base your analysis on the supplied study materials.
-Do not assume that the student is weak in a topic without evidence.
+Base your analysis on the supplied materials.
+Do not assume weakness without evidence.
 `;
-    }
 
-    else if (isImage) {
+    } else if (isImage) {
+
         userMessage = [
             {
                 type: "text",
@@ -152,9 +171,9 @@ ${studentQuery || "Explain the content of this image and summarise its important
                 }
             }
         ];
-    }
 
-    else {
+    } else {
+
         userMessage = `
 Here are my lecture notes for ${unitCode}:
 
@@ -166,6 +185,7 @@ ${studentQuery || "Explain the important concepts in these notes."}
 `;
     }
 
+    // 8. Send request to xAI
     try {
         const controller = new AbortController();
 
@@ -183,11 +203,11 @@ ${studentQuery || "Explain the important concepts in these notes."}
 
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${process.env.XAI_API_KEY}`
+                        "Authorization": `Bearer ${apiKey}`
                     },
 
                     body: JSON.stringify({
-                        model: "grok-beta",
+                        model: "grok-4.7",
 
                         messages: [
                             {
@@ -201,7 +221,11 @@ ${studentQuery || "Explain the important concepts in these notes."}
                         ],
 
                         temperature: 0.3,
-                        max_tokens: actionType === "combine_summary" ? 2500 : 1500
+
+                        max_tokens:
+                            actionType === "combine_summary"
+                                ? 2500
+                                : 1500
                     }),
 
                     signal: controller.signal
@@ -212,33 +236,59 @@ ${studentQuery || "Explain the important concepts in these notes."}
             clearTimeout(timeout);
         }
 
-        const data = await response.json();
+        // 9. Read provider response safely
+        const rawResponse = await response.text();
 
+        let data;
+
+        try {
+            data = JSON.parse(rawResponse);
+        } catch {
+            data = {
+                error: {
+                    message: rawResponse || "Empty response from AI provider."
+                }
+            };
+        }
+
+        // 10. Handle xAI errors
         if (!response.ok) {
-            console.error("xAI API response:", data);
+            const providerMessage =
+                data?.error?.message ||
+                data?.error?.code ||
+                "Unknown xAI provider error.";
+
+            console.error("xAI API ERROR:", {
+                status: response.status,
+                details: data
+            });
 
             return res.status(502).json({
-                error:
-                    data?.error?.message ||
-                    "The AI provider could not process your request."
+                error: "xAI request failed.",
+                details: providerMessage,
+                providerStatus: response.status
             });
         }
 
+        // 11. Check AI response
         const reply = data?.choices?.[0]?.message?.content;
 
         if (!reply || typeof reply !== "string") {
             console.error("Unexpected xAI response:", data);
 
             return res.status(502).json({
-                error: "The AI returned an empty or invalid response."
+                error: "The AI returned an empty or invalid response.",
+                details: "No text was found in the provider response."
             });
         }
 
+        // 12. Return successful answer
         return res.status(200).json({
             reply: reply.trim()
         });
 
     } catch (error) {
+
         console.error("ExamMate AI Error:", error);
 
         if (error.name === "AbortError") {
@@ -248,7 +298,8 @@ ${studentQuery || "Explain the important concepts in these notes."}
         }
 
         return res.status(500).json({
-            error: "Failed to connect to the AI service."
+            error: "Failed to connect to the AI service.",
+            details: error.message
         });
     }
 }
