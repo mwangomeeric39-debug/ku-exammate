@@ -3,32 +3,26 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { unitCode, content, contentType, studentQuery } = req.body;
+    const { unitCode, content, contentType, studentQuery, actionType, studentAnswers } = req.body;
 
-    if (!unitCode || !content || !studentQuery) {
+    if (!unitCode || !content) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
     try {
-        let userMessageContent = [];
+        let systemPrompt = `You are an expert AI adaptive study coach for Kenyatta University (KU) students studying ${unitCode}.`;
+        let userMessage = "";
 
-        // If the uploaded file is an image, use Grok Vision format
-        if (contentType && contentType.startsWith('image/')) {
-            userMessageContent = [
-                {
-                    type: "text",
-                    text: `Here is an image of my study material for ${unitCode}. Based on this image, answer this question: ${studentQuery}`
-                },
-                {
-                    type: "image_url",
-                    image_url: {
-                        url: content // Base64 image data string
-                    }
-                }
+        if (actionType === "diagnose_exam") {
+            systemPrompt += ` You are performing an adaptive diagnostic analysis on a student's exam answers against their uploaded study materials. Identify the exact weak topics (e.g. database normalization, recursion, etc.), explain them simply, generate targeted practice questions for the weak areas, and set up a re-test.`;
+            userMessage = `Here are my study materials:\n${content}\n\nHere are my answers to the diagnostic exam:\n${studentAnswers}\n\nAnalyze my performance. Identify what topic I am struggling with most, explain it simply, provide 2 targeted practice questions on that specific weak topic, and explain how we can measure my improvement.`;
+        } else if (contentType && contentType.startsWith('image/')) {
+            userMessage = [
+                { type: "text", text: `Based on this image for ${unitCode}, answer: ${studentQuery}` },
+                { type: "image_url", image_url: { url: content } }
             ];
         } else {
-            // For PDFs, Spreadsheets, or text copy-paste
-            userMessageContent = `Here are my lecture notes/material (${contentType || 'Text'}):\n${content}\n\nBased on these materials, answer this question: ${studentQuery}`;
+            userMessage = `Here are my course notes/materials for ${unitCode}:\n${content}\n\nBased on these materials, ${studentQuery}`;
         }
 
         const response = await fetch("https://api.x.ai/v1/chat/completions", {
@@ -40,14 +34,8 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 model: "grok-beta",
                 messages: [
-                    {
-                        role: "system",
-                        content: `You are an expert AI study coach for Kenyatta University (KU) students. You help students master their course units (like ${unitCode}) using their notes, images, tables, and documents. Be encouraging, clear, and practical.`
-                    },
-                    {
-                        role: "user",
-                        content: userMessageContent
-                    }
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userMessage }
                 ],
                 temperature: 0.7
             })
@@ -59,9 +47,7 @@ export default async function handler(req, res) {
             throw new Error('Invalid response from Grok API');
         }
 
-        const aiReply = data.choices[0].message.content;
-
-        return res.status(200).json({ reply: aiReply });
+        return res.status(200).json({ reply: data.choices[0].message.content });
     } catch (error) {
         console.error("Grok API Error:", error);
         return res.status(500).json({ error: 'Failed to connect to Grok AI.' });

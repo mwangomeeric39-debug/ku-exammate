@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KU ExamMate - Ultimate AI Study Coach</title>
+    <title>KU ExamMate - Adaptive AI Study Coach</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js for PDF reading -->
@@ -30,17 +30,16 @@
     <!-- Main App Container -->
     <main class="max-w-md mx-auto p-4 flex-1 flex flex-col w-full space-y-4">
         
-        <!-- Step 1: Universal Unit Setup Card -->
+        <!-- Step 1: Unit Setup Card -->
         <div id="setupCard" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
             <div class="flex justify-between items-center">
-                <h2 class="font-bold text-sm text-slate-200">Setup Your Course Unit & Material</h2>
+                <h2 class="font-bold text-sm text-slate-200">Setup Course Unit & Notes</h2>
                 <span class="text-[10px] text-slate-400">Step 1</span>
             </div>
             <div>
                 <input type="text" id="unitCode" placeholder="e.g. CIT 201: Data Structures" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
             </div>
             
-            <!-- Universal File Upload -->
             <div class="space-y-1">
                 <label class="block text-[10px] font-semibold text-slate-400">UPLOAD MATERIAL (PDF, Excel, Photo, Notes)</label>
                 <input type="file" id="mediaFile" accept=".pdf,.xlsx,.xls,.csv,image/*" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-slate-950 hover:file:bg-amber-400 cursor-pointer">
@@ -52,62 +51,63 @@
                 <textarea id="notesInput" rows="2" placeholder="Paste notes summary here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 resize-none"></textarea>
             </div>
 
-            <button onclick="initializeTutor()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md shadow-amber-500/10">
+            <button onclick="initializeTutor()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl transition text-xs shadow-md">
                 Launch ExamMate 🚀
             </button>
         </div>
 
-        <!-- Step 2: 5-Feature Dashboard (Hidden initially) -->
+        <!-- Step 2: Full Dashboard including Adaptive Loop -->
         <div id="tutorInterface" class="hidden flex-1 flex flex-col space-y-3">
             
             <div class="bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl flex justify-between items-center">
                 <span class="text-xs font-bold text-amber-400" id="activeUnitLabel">Unit</span>
-                <button onclick="resetSetup()" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700">Change Material 🔄</button>
+                <button onclick="resetSetup()" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700">Change Notes 🔄</button>
             </div>
 
-            <!-- 5-Feature Tab Bar -->
-            <div class="grid grid-cols-5 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[10px] text-center font-bold">
-                <button onclick="switchFeature('summary')" id="tabSummary" class="py-2 rounded-lg bg-amber-500 text-slate-950 transition">1. Summary</button>
-                <button onclick="switchFeature('cat')" id="tabCat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">2. CATs</button>
-                <button onclick="switchFeature('flashcards')" id="tabFlash" class="py-2 rounded-lg text-slate-400 hover:text-white transition">3. Cards</button>
-                <button onclick="switchFeature('chat')" id="tabChat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">4. Chat</button>
-                <button onclick="switchFeature('exam')" id="tabExam" class="py-2 rounded-lg text-slate-400 hover:text-white transition">5. Exam</button>
+            <!-- Tab Bar -->
+            <div class="grid grid-cols-6 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[10px] text-center font-bold">
+                <button onclick="switchFeature('summary')" id="tabSummary" class="py-2 rounded-lg bg-amber-500 text-slate-950 transition">Summary</button>
+                <button onclick="switchFeature('cat')" id="tabCat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">CATs</button>
+                <button onclick="switchFeature('flashcards')" id="tabFlash" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Cards</button>
+                <button onclick="switchFeature('chat')" id="tabChat" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Chat</button>
+                <button onclick="switchFeature('exam')" id="tabExam" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Exam</button>
+                <button onclick="switchFeature('adaptive')" id="tabAdaptive" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Adaptive 🧬</button>
             </div>
 
-            <!-- FEATURE 1: Summarise Notes -->
+            <!-- 1. Summary -->
             <div id="viewSummary" class="flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span class="text-xs font-bold text-amber-400">Topic-by-Topic Revision Summary</span>
-                    <button onclick="generateSummary()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Generate ✨</button>
+                    <span class="text-xs font-bold text-amber-400">Topic Revision Summary</span>
+                    <button onclick="generateSummary()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Generate ✨</button>
                 </div>
                 <div id="summaryContent" class="flex-1 text-xs text-slate-300 space-y-2 overflow-y-auto max-h-[300px]">
-                    <p class="text-slate-400 text-center py-6">Click 'Generate' to simplify your uploaded notes into clear, topic-organized revision notes.</p>
+                    <p class="text-slate-400 text-center py-6">Click 'Generate' to simplify your notes.</p>
                 </div>
             </div>
 
-            <!-- FEATURE 2: Generate Practice CATs -->
+            <!-- 2. CATs -->
             <div id="viewCat" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                     <span class="text-xs font-bold text-amber-400">Practice CAT Questions</span>
-                    <button onclick="generateCat()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Generate CAT 📝</button>
+                    <button onclick="generateCat()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Generate CAT 📝</button>
                 </div>
                 <div id="catContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
-                    <p class="text-slate-400 text-center py-6">Click 'Generate CAT' to build custom multi-choice & structured questions.</p>
+                    <p class="text-slate-400 text-center py-6">Click 'Generate CAT' to build custom practice questions.</p>
                 </div>
             </div>
 
-            <!-- FEATURE 3: Create Flashcards -->
+            <!-- 3. Flashcards -->
             <div id="viewFlash" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                     <span class="text-xs font-bold text-amber-400">Interactive Flashcards</span>
-                    <button onclick="generateFlashcards()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Create Cards 📇</button>
+                    <button onclick="generateFlashcards()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Create Cards 📇</button>
                 </div>
                 <div id="flashContent" class="flex-1 flex flex-col justify-center items-center text-center p-4">
-                    <p class="text-slate-400 text-xs">Click 'Create Cards' to generate question/answer flashcards from your notes.</p>
+                    <p class="text-slate-400 text-xs">Click 'Create Cards' to generate active recall flashcards.</p>
                 </div>
             </div>
 
-            <!-- FEATURE 4: Chat with Notes -->
+            <!-- 4. Chat -->
             <div id="viewChat" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
                     <span class="text-xs font-bold text-amber-400">Chat with Notes (ELI10)</span>
@@ -120,18 +120,32 @@
                 </div>
                 <div class="flex space-x-2 pt-2">
                     <input type="text" id="userQuery" placeholder="Ask question..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" onkeypress="handleKey(event)">
-                    <button onclick="sendQuery()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">Ask</button>
+                    <button onclick="sendQuery()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs">Ask</button>
                 </div>
             </div>
 
-            <!-- FEATURE 5: Test Myself -->
+            <!-- 5. Exam -->
             <div id="viewExam" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                     <span class="text-xs font-bold text-amber-400">Mock Exam & Grading</span>
-                    <button onclick="startExam()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded font-semibold">Start Exam 🎓</button>
+                    <button onclick="startExam()" class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded">Start Exam 🎓</button>
                 </div>
                 <div id="examContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
-                    <p class="text-slate-400 text-center py-6">Take a practice exam and receive instant AI grading with explanations for mistakes.</p>
+                    <p class="text-slate-400 text-center py-6">Take a practice exam and receive instant AI feedback.</p>
+                </div>
+            </div>
+
+            <!-- 6. ADAPTIVE DIAGNOSTIC LOOP (The 8-Step Workflow) -->
+            <div id="viewAdaptive" class="hidden flex-1 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
+                    <span class="text-xs font-bold text-amber-400">Adaptive Diagnostic Coach 🧬</span>
+                    <button onclick="startAdaptiveDiagnostic()" class="text-[10px] bg-amber-500 text-slate-950 font-bold px-2 py-1 rounded">Run Diagnostic 🔍</button>
+                </div>
+                <div id="adaptiveContent" class="flex-1 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[300px]">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <p class="font-bold text-white">How the Adaptive Loop Works:</p>
+                        <p class="text-slate-400 text-[11px]">1. ExamMate analyzes your notes to identify core topics.<br>2. You take a diagnostic test.<br>3. ExamMate diagnoses your weak topic (e.g. database normalization), simplifies it, gives you targeted practice questions, re-tests you, and measures your improvement!</p>
+                    </div>
                 </div>
             </div>
 
@@ -151,12 +165,12 @@
                 <h3 class="font-bold text-sm text-amber-400">Unlock Exam Pass 🚀</h3>
                 <button onclick="closePaywall()" class="text-slate-400 hover:text-white text-sm">✕</button>
             </div>
-            <p class="text-xs text-slate-300">Get 7 days of unlimited AI study features for just <strong>KSh 99</strong>.</p>
+            <p class="text-xs text-slate-300">Get unlimited adaptive AI study features for just <strong>KSh 99</strong>.</p>
             <div class="space-y-2">
                 <label class="block text-[10px] font-semibold text-slate-400">MPESA PHONE NUMBER</label>
                 <input type="text" id="mpesaPhone" placeholder="0712345678" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
             </div>
-            <button onclick="triggerStkPush()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition text-xs shadow-lg shadow-emerald-600/20">
+            <button onclick="triggerStkPush()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition text-xs shadow-lg">
                 Pay KSh 99 via M-Pesa STK Push 📲
             </button>
         </div>
@@ -233,7 +247,7 @@
                 document.getElementById('setupCard').classList.add('hidden');
                 document.getElementById('tutorInterface').classList.remove('hidden');
                 document.getElementById('activeUnitLabel').innerText = currentUnit;
-                generateSummary(); // Auto-generate feature 1
+                generateSummary();
 
             } catch (err) {
                 console.error("Error:", err);
@@ -248,10 +262,12 @@
         }
 
         function switchFeature(feature) {
-            const views = ['summary', 'cat', 'flash', 'chat', 'exam'];
+            const views = ['summary', 'cat', 'flash', 'chat', 'exam', 'adaptive'];
             views.forEach(v => {
-                document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('hidden');
-                document.getElementById('tab' + v.charAt(0).toUpperCase() + v.slice(1)).className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
+                const el = document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1));
+                const tab = document.getElementById('tab' + v.charAt(0).toUpperCase() + v.slice(1));
+                if(el) el.classList.add('hidden');
+                if(tab) tab.className = "py-2 rounded-lg text-slate-400 hover:text-white transition";
             });
 
             document.getElementById('view' + feature.charAt(0).toUpperCase() + feature.slice(1)).classList.remove('hidden');
@@ -259,9 +275,6 @@
         }
 
         async function askGrok(promptText, outputContainerId) {
-            const container = document.getElementById(outputContainerId);
-            container.innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Grok AI is analyzing your notes... 🧠</div>`;
-
             try {
                 const response = await fetch('/api/ask', {
                     method: 'POST',
@@ -280,23 +293,22 @@
             }
         }
 
-        // FEATURE 1: Summarise Notes
         async function generateSummary() {
+            document.getElementById('summaryContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Summarising notes... 🧠</div>`;
             const reply = await askGrok("Summarise these study notes into simplified key points organised by topic for exam revision.", "summaryContent");
             document.getElementById('summaryContent').innerHTML = `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</div>`;
         }
 
-        // FEATURE 2: Generate Practice CATs
         async function generateCat() {
+            document.getElementById('catContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Generating CAT... 📝</div>`;
             const reply = await askGrok("Generate 3 practice CAT questions (Multiple Choice and Structured) from these notes with answers at the end.", "catContent");
             document.getElementById('catContent').innerHTML = `<div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</div>`;
         }
 
-        // FEATURE 3: Flashcards
         async function generateFlashcards() {
+            document.getElementById('flashContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Creating flashcards... 📇</div>`;
             const reply = await askGrok("Create 4 flashcards from these notes. Format each strictly as Q: [question] | A: [answer]. Separate each card with '---'.", "flashContent");
             
-            // Parse reply into cards
             flashcardList = reply.split('---').map(card => {
                 const parts = card.trim().split('| A:');
                 return {
@@ -349,7 +361,6 @@
             showCard();
         }
 
-        // FEATURE 4: Chat with Notes
         function handleKey(e) { if (e.key === 'Enter') sendQuery(); }
         async function sendQuery() {
             const input = document.getElementById('userQuery');
@@ -366,9 +377,9 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // FEATURE 5: Test Myself
         async function startExam() {
-            const reply = await askGrok("Create a 3-question practice exam from these notes. List the questions clearly.", "examContent");
+            document.getElementById('examContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Preparing exam... 🎓</div>`;
+            const reply = await askGrok("Create a 3-question diagnostic practice exam from these notes. List the questions clearly.", "examContent");
             document.getElementById('examContent').innerHTML = `
                 <div class="space-y-3">
                     <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300">${reply.replace(/\n/g, '<br>')}</div>
@@ -381,9 +392,68 @@
         async function submitExam() {
             const ans = document.getElementById('examAnswers').value.trim();
             if (!ans) { alert("Andika majibu yako kwanza!"); return; }
+            document.getElementById('examContent').innerHTML = `<div class="text-center py-6 text-amber-400 animate-pulse">Grading exam and analyzing weak points... 🔍</div>`;
             
             const reply = await askGrok(`Grade my answers for the practice exam: "${ans}". Provide my score, correct answers, and explanations for mistakes.`, "examContent");
             document.getElementById('examContent').innerHTML = `<div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2"><span class="font-bold text-emerald-400">Exam Grading & Feedback</span><p class="text-slate-300 leading-relaxed">${reply.replace(/\n/g, '<br>')}</p><button onclick="startExam()" class="mt-2 w-full bg-slate-800 text-slate-300 font-bold py-2 rounded-lg text-xs">Retake Exam 🔄</button></div>`;
+        }
+
+        // ADAPTIVE DIAGNOSTIC WORKFLOW
+        async function startAdaptiveDiagnostic() {
+            const container = document.getElementById('adaptiveContent');
+            container.innerHTML = `
+                <div class="space-y-3">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300 space-y-2">
+                        <p class="font-bold text-amber-400">Diagnostic Step 1: Take Diagnostic Test</p>
+                        <p class="text-xs text-slate-400">Answer this quick diagnostic test based on your notes:</p>
+                        <p class="text-white text-xs font-semibold">Q: Briefly explain database normalization and why 1NF, 2NF, and 3NF are used in relational databases.</p>
+                        <textarea id="diagAnswer" rows="3" placeholder="Type your answer here..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
+                    </div>
+                    <button onclick="submitDiagnostic()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition">
+                        Run Adaptive Diagnostic Analysis 🧬
+                    </button>
+                </div>
+            `;
+        }
+
+        async function submitDiagnostic() {
+            const ans = document.getElementById('diagAnswer').value.trim();
+            if (!ans) { alert("Please type your answer!"); return; }
+
+            const container = document.getElementById('adaptiveContent');
+            container.innerHTML = `<div class="text-center py-10 text-amber-400 animate-pulse">Analyzing weak points, simplifying concepts, and preparing re-test... 🔄</div>`;
+
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        unitCode: currentUnit,
+                        content: processedContent,
+                        contentType: contentType,
+                        actionType: "diagnose_exam",
+                        studentAnswers: ans
+                    })
+                });
+                const data = await response.json();
+
+                container.innerHTML = `
+                    <div class="bg-slate-950 p-4 rounded-xl border border-amber-500/30 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-amber-400">Adaptive Diagnostic Results 🧬</span>
+                            <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded">Weakness Identified</span>
+                        </div>
+                        <div class="text-slate-300 leading-relaxed text-xs space-y-2">
+                            ${data.reply.replace(/\n/g, '<br>')}
+                        </div>
+                        <button onclick="startAdaptiveDiagnostic()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-lg text-xs transition">
+                            Take Improvement Re-Test 🚀
+                        </button>
+                    </div>
+                `;
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-400 text-center py-4">⚠️ Error running diagnostic analysis.</p>`;
+            }
         }
 
         function openPaywall() { document.getElementById('paywallModal').classList.remove('hidden'); }
