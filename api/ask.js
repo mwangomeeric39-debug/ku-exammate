@@ -186,57 +186,50 @@ ${studentQuery || "Explain the important concepts in these notes."}
     }
 
     // 8. Send request to xAI
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+        controller.abort();
+    }, 60000);
+
     try {
-        const controller = new AbortController();
+        const response = await fetch(
+            "https://api.x.ai/v1/chat/completions",
+            {
+                method: "POST",
 
-        const timeout = setTimeout(() => {
-            controller.abort();
-        }, 60000);
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`
+                },
 
-        let response;
+                body: JSON.stringify({
+                    model: "grok-4.7",
 
-        try {
-            response = await fetch(
-                "https://api.x.ai/v1/chat/completions",
-                {
-                    method: "POST",
+                    messages: [
+                        {
+                            role: "system",
+                            content: systemPrompt
+                        },
+                        {
+                            role: "user",
+                            content: userMessage
+                        }
+                    ],
 
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${apiKey}`
-                    },
+                    temperature: 0.3,
 
-                    body: JSON.stringify({
-                        model: "grok-4.7",
+                    max_tokens:
+                        actionType === "combine_summary"
+                            ? 2500
+                            : 1500
+                }),
 
-                        messages: [
-                            {
-                                role: "system",
-                                content: systemPrompt
-                            },
-                            {
-                                role: "user",
-                                content: userMessage
-                            }
-                        ],
+                signal: controller.signal
+            }
+        );
 
-                        temperature: 0.3,
-
-                        max_tokens:
-                            actionType === "combine_summary"
-                                ? 2500
-                                : 1500
-                    }),
-
-                    signal: controller.signal
-                }
-            );
-
-        } finally {
-            clearTimeout(timeout);
-        }
-
-        // 9. Read provider response safely
+        // 9. Read the complete provider response
         const rawResponse = await response.text();
 
         let data;
@@ -244,33 +237,56 @@ ${studentQuery || "Explain the important concepts in these notes."}
         try {
             data = JSON.parse(rawResponse);
         } catch {
-            data = {
-                error: {
-                    message: rawResponse || "Empty response from AI provider."
-                }
-            };
+            data = null;
         }
 
-        // 10. Handle xAI errors
+        // 10. Handle xAI errors with better diagnostics
         if (!response.ok) {
-            const providerMessage =
-                data?.error?.message ||
-                data?.error?.code ||
-                "Unknown xAI provider error.";
 
-            console.error("xAI API ERROR:", {
+            let providerMessage = "xAI returned an error without an explanation.";
+
+            if (typeof data?.error === "string") {
+                providerMessage = data.error;
+
+            } else if (typeof data?.error?.message === "string") {
+                providerMessage = data.error.message;
+
+            } else if (typeof data?.error?.code === "string") {
+                providerMessage = data.error.code;
+
+            } else if (typeof data?.message === "string") {
+                providerMessage = data.message;
+
+            } else if (rawResponse) {
+                providerMessage = rawResponse;
+            }
+
+            console.error("EXAMMATE XAI ERROR:", {
                 status: response.status,
-                details: data
+                statusText: response.statusText,
+                providerError: data?.error || null,
+                providerResponse: rawResponse
             });
 
             return res.status(502).json({
                 error: "xAI request failed.",
                 details: providerMessage,
-                providerStatus: response.status
+                providerStatus: response.status,
+                providerResponse: data || rawResponse
             });
         }
 
-        // 11. Check AI response
+        // 11. Check whether response is valid JSON
+        if (!data) {
+            console.error("xAI returned invalid JSON:", rawResponse);
+
+            return res.status(502).json({
+                error: "The AI returned an invalid response.",
+                details: "The provider response could not be read as JSON."
+            });
+        }
+
+        // 12. Check AI response
         const reply = data?.choices?.[0]?.message?.content;
 
         if (!reply || typeof reply !== "string") {
@@ -278,18 +294,19 @@ ${studentQuery || "Explain the important concepts in these notes."}
 
             return res.status(502).json({
                 error: "The AI returned an empty or invalid response.",
-                details: "No text was found in the provider response."
+                details: "No text was found in the provider response.",
+                providerResponse: data
             });
         }
 
-        // 12. Return successful answer
+        // 13. Return successful answer
         return res.status(200).json({
             reply: reply.trim()
         });
 
     } catch (error) {
 
-        console.error("ExamMate AI Error:", error);
+        console.error("EXAMMATE AI CONNECTION ERROR:", error);
 
         if (error.name === "AbortError") {
             return res.status(504).json({
@@ -301,5 +318,8 @@ ${studentQuery || "Explain the important concepts in these notes."}
             error: "Failed to connect to the AI service.",
             details: error.message
         });
+
+    } finally {
+        clearTimeout(timeout);
     }
 }
